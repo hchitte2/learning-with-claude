@@ -23,8 +23,6 @@ These files are created by `/teach` as I learn, so a new topic starts empty.
 | `RESOURCES.md` | The trusted sources the lessons are based on |
 | `GLOSSARY.md` | Terms I've learned, defined in my own words |
 
-## How a session works
+## How to use this repo
 
-1. Open Claude Code in the topic folder: `cd <topic> && claude`.
-2. Run `/teach` and work through the lesson and its quiz, asking follow-up questions as I go.
-3. Save progress: `git add -A && git commit -m "<topic>: <what I learned>" && git push`.
+My step-by-step daily routine is in [HOW-TO-USE.md](HOW-TO-USE.md).
