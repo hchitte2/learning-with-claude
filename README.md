@@ -4,7 +4,7 @@ My learning workspace. I use [Claude Code](https://claude.com/claude-code) as a 
 
 ## Topics
 
-Each topic has its own folder.
+Each topic has its own folder. Current plan: [learn every project of my Ithena assignment](ITHENA-LEARNING-PLAN.md).
 
 | Topic | Started | Why |
 |-------|---------|-----|
