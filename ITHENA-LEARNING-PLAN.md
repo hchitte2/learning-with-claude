@@ -7,7 +7,7 @@ Each project gets its own topic folder here and its own `/teach` sessions (about
 ## Progress
 
 - [ ] 1. Project 1: Common Terms, Vendors, and Products (`p1-it-terms`)
-- [ ] 2. Project 5: JSP Login Page (`p5-jsp-login`)
+- [ ] 2. Project 5: JSP Login Page (`jsp-servlets`)
 - [ ] 3. Project 8: API (`p8-rest-api`)
 - [ ] 4. Project 6: Requirements Gathering (`p6-requirements`)
 - [ ] 5. Project 3: DBMS Middleware (`p3-middleware`)
@@ -59,7 +59,7 @@ Other skills while you learn: `/wait-what` when an explanation doesn't land, and
 - Name two leading BI tools and one way they differ.
 
 ## Project 5: JSP Login Page
-**Folder:** `p5-jsp-login`
+**Folder:** `jsp-servlets`
 
 ```
 /teach How my JSP login app works: servlets, JSP views, JDBC, sessions, and password hashing. Base the lessons on my code in ~/Ithena_Intro_Assignment/Project_5_JSP_Login (start with its README).
