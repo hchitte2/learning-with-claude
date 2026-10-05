@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sessions cheat sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main class="page">
+
+<p class="course-line"><a href="../lessons/0002-remembering-who-is-logged-in.html">Explaining Project 5</a>, reference sheet</p>
+<h1>Sessions cheat sheet</h1>
+<p class="lead">How Project 5 remembers who is logged in, and how it protects that memory.</p>
+
+<p class="sidenote">HTTP “is by design a stateless protocol”: <a href="https://jakarta.ee/specifications/servlet/6.1/jakarta-servlet-spec-6.1#sessions">Servlet spec, chapter 7</a>.</p>
+<p>HTTP forgets between requests. A <strong>session</strong> is a small store on the server for one visitor (<code>HttpSession</code>). Tomcat gives the browser its ID in the <code>JSESSIONID</code> cookie, the browser sends it back on every request, and Tomcat uses it to find the session. Project 5 stores one thing there: the User ID.</p>
+
+<h2>The real headers</h2>
+<pre class="wide http"><code><span class="dim"># First visit to /login: login.jsp joins a session by default</span>
+Set-Cookie: JSESSIONID=71934BB6…; Path=/jsp-login; HttpOnly; SameSite=Lax
+<span class="dim"># Correct login: a brand-new ID, then a redirect</span>
+Set-Cookie: JSESSIONID=4EE2E79B…; Path=/jsp-login; HttpOnly; SameSite=Lax
+Location: /jsp-login/home
+<span class="dim"># Every later request</span>
+Cookie: JSESSIONID=4EE2E79B…
+<span class="dim"># /home response</span>
+Cache-Control: no-store</code></pre>
+<p class="small">Captured from a test copy of the app on 5 October 2026.</p>
+
+<h2 class="wide">The code</h2>
+<div class="wide table-scroll">
+<table>
+  <thead><tr><th>Job</th><th>Where</th><th>Key line</th></tr></thead>
+  <tbody>
+    <tr><td>Log in: new session, store User ID</td><td><span class="chip layer-servlet">LoginServlet</span> lines 52–57</td><td><code>old.invalidate();</code> then <code class="wrap">req.getSession(true).setAttribute("userId", userId)</code></td></tr>
+    <tr><td>Ask “who is this?”</td><td><span class="chip layer-servlet">AppServlet</span> lines 30–33</td><td><code>req.getSession(false)</code>, then <code>getAttribute("userId")</code></td></tr>
+    <tr><td>Guard private pages</td><td><span class="chip layer-servlet">AuthFilter</span> (<code>/home</code>, <code>/photo</code>)</td><td>No User ID: redirect to <code>/login?required</code></td></tr>
+    <tr><td>Log out</td><td><span class="chip layer-servlet">LogoutServlet</span> (POST only)</td><td><code>session.invalidate()</code>, redirect to <code>/login?loggedOut</code></td></tr>
+  </tbody>
+</table>
+</div>
+<p><code>getSession(true)</code>: find the session, or create one. <code>getSession(false)</code>: find it, or return <code>null</code>.</p>
+
+<h2 class="wide">The protections</h2>
+<div class="wide table-scroll">
+<table>
+  <thead><tr><th>Protection</th><th>Set in</th><th>What it stops</th></tr></thead>
+  <tbody>
+    <tr><td>New session ID at login</td><td><code>LoginServlet</code></td><td>Session fixation: an ID planted before login becoming a logged-in session</td></tr>
+    <tr><td><code>HttpOnly</code> cookie</td><td><code>web.xml</code> <code>&lt;http-only&gt;</code></td><td>JavaScript (for example an injected script) reading the session ID</td></tr>
+    <tr><td><code>SameSite=Lax</code> cookie</td><td><code>META-INF/context.xml</code></td><td>Other sites making your browser POST to the app with your session (CSRF)</td></tr>
+    <tr><td>Cookies only, never the URL</td><td><code>web.xml</code> <code>&lt;tracking-mode&gt;COOKIE</code></td><td>Session IDs appearing in URLs, where they leak into history and logs</td></tr>
+    <tr><td>Logout is a POST</td><td><code>home.jsp</code> form, <code>LogoutServlet</code></td><td>Accidental logout from links, crawlers, or prefetching</td></tr>
+    <tr><td><code>Cache-Control: no-store</code></td><td><code>AuthFilter</code></td><td>Back button showing a stored copy of Home after logout</td></tr>
+    <tr><td>30-minute timeout</td><td><code>web.xml</code> <code>&lt;session-timeout&gt;</code></td><td>Abandoned sessions staying usable forever</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="small">For production, the README adds HTTPS, which also lets the cookie carry the <code>Secure</code> flag. Sources: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html">OWASP Session Management</a>, <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies">MDN cookies</a>, <a href="https://tomcat.apache.org/tomcat-11.0-doc/config/cookie-processor.html">Tomcat Cookie Processor</a>, <a href="https://jakarta.ee/specifications/servlet/6.1/jakarta-servlet-spec-6.1#url-rewriting">Servlet spec §7.1.3</a>.</p>
+
+<nav class="lesson-nav wide">
+  <a href="../lessons/0002-remembering-who-is-logged-in.html">Lesson 2: remembering who is logged in</a>
+  <a href="project-5-flowchart.html">Reference: flow charts</a>
+</nav>
+
+</main>
+</body>
+</html>

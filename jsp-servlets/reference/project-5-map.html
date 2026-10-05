@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project 5 map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main class="page">
+
+<p class="course-line"><a href="../lessons/0001-the-login-click.html">Explaining Project 5</a>, reference sheet</p>
+<h1>Project 5 map</h1>
+<p class="lead">Every layer, URL, file, and SQL query in the JSP login app, on one page.</p>
+<p>For the same app drawn as diagrams, see the <a href="project-5-flowchart.html">Project 5 flow charts</a>.</p>
+
+<p class="sidenote">Source: branch <code>feat/project-5-jsp-login</code> in <code>~/Ithena_Intro_Assignment</code>. Java paths below are relative to <code class="wrap">src/main/java/com/ithena/jsplogin/</code>.</p>
+
+<h2>The layers</h2>
+<p>Each colour marks one layer of the app, and the lessons use the same colours.</p>
+<ul class="cast">
+  <li class="layer-browser"><span class="name">Browser</span><p>Sends HTTP requests and shows the HTML that comes back.</p></li>
+  <li class="layer-tomcat"><span class="name">Tomcat</span><p>The servlet container. It listens on port 8080, picks the servlet for each URL, and runs the JSPs.</p></li>
+  <li class="layer-servlet"><span class="name">Servlets and filters</span><p>Java classes in <code>web/</code> that receive requests and decide what happens. The controllers.</p></li>
+  <li class="layer-jsp"><span class="name">JSPs</span><p>HTML templates in <code>WEB-INF/views/</code> that produce each page. The views.</p></li>
+  <li class="layer-db"><span class="name">JDBC and the database</span><p><code>UserDao</code> sends SQL through JDBC to the <code>users</code> table in an H2 database.</p></li>
+</ul>
+
+<h2>A login, in five steps</h2>
+<ol class="journey">
+  <li class="layer-browser"><span class="hop-title">The browser sends <code>POST /jsp-login/login</code></span>with the <code>userId</code> and <code>password</code> fields from the form.</li>
+  <li class="layer-tomcat"><span class="hop-title">Tomcat calls <span class="chip layer-servlet">LoginServlet</span>.doPost</span>because <code>@WebServlet("/login")</code> claims that URL and the method is POST.</li>
+  <li class="layer-db"><span class="hop-title"><span class="chip layer-db">UserDao</span> fetches the stored password hash</span>with <code class="wrap">SELECT password_hash FROM users WHERE user_id = ?</code> over JDBC.</li>
+  <li class="layer-servlet"><span class="hop-title"><span class="chip layer-servlet">LoginServlet</span> checks the password</span>Wrong: it forwards to <span class="chip layer-jsp">login.jsp</span> with an error. Right: it stores the User ID in a new session and redirects to <code>/home</code>.</li>
+  <li class="layer-browser"><span class="hop-title">The browser gets the response</span>Either the login page with the error, or a redirect that makes it request <code>GET /home</code>.</li>
+</ol>
+
+<h2 class="wide">Every URL</h2>
+<p>All URLs start with the context path <code>/jsp-login</code>. <span class="chip layer-servlet">SecurityHeadersFilter</span> runs first on every request and adds browser security headers.</p>
+<div class="wide table-scroll">
+<table>
+  <thead><tr><th>URL</th><th>Handled by</th><th>GET</th><th>POST</th></tr></thead>
+  <tbody>
+    <tr><td><code>/</code></td><td><span class="chip layer-jsp">index.jsp</span></td><td>Redirects to <code>/login</code></td><td>—</td></tr>
+    <tr><td><code>/login</code></td><td><span class="chip layer-servlet">LoginServlet</span></td><td>Shows <span class="chip layer-jsp">login.jsp</span>, or sends a logged-in user to <code>/home</code></td><td>Checks the password. Wrong: <span class="chip layer-jsp">login.jsp</span> with an error. Right: new session, redirect to <code>/home</code></td></tr>
+    <tr><td><code>/register</code></td><td><span class="chip layer-servlet">RegisterServlet</span></td><td>Shows <span class="chip layer-jsp">register.jsp</span></td><td>Validates the form, checks for a taken User ID or email, saves the user with a hashed password and photo, redirects to <code>/registered</code></td></tr>
+    <tr><td><code>/registered</code></td><td><span class="chip layer-servlet">RegisteredServlet</span></td><td>Shows <span class="chip layer-jsp">registered.jsp</span> once, using a one-time value in the session. Otherwise redirects to <code>/login</code></td><td>—</td></tr>
+    <tr><td><code>/forgot-password</code></td><td><span class="chip layer-servlet">ForgotPasswordServlet</span></td><td>Shows <span class="chip layer-jsp">forgot-password.jsp</span></td><td>Checks User ID, email, and date of birth match an account, saves the new password hash, redirects to <code>/login?reset</code></td></tr>
+    <tr><td><code>/home</code></td><td><span class="chip layer-servlet">AuthFilter</span>, then <span class="chip layer-servlet">HomeServlet</span></td><td>Loads the user and shows <span class="chip layer-jsp">home.jsp</span>: today's date, welcome, photo</td><td>—</td></tr>
+    <tr><td><code>/photo</code></td><td><span class="chip layer-servlet">AuthFilter</span>, then <span class="chip layer-servlet">PhotoServlet</span></td><td>Sends the logged-in user's photo bytes from the database</td><td>—</td></tr>
+    <tr><td><code>/logout</code></td><td><span class="chip layer-servlet">LogoutServlet</span></td><td>Redirects to <code>/home</code></td><td>Ends the session, redirects to <code>/login?loggedOut</code></td></tr>
+  </tbody>
+</table>
+</div>
+<p class="small"><span class="chip layer-servlet">AuthFilter</span> sends anyone without a logged-in session to <code>/login?required</code>. Any 404, 405, or 500 error shows <span class="chip layer-jsp">error.jsp</span> (set in <code>web.xml</code>).</p>
+
+<h2 class="wide">Every file</h2>
+<div class="wide table-scroll">
+<table>
+  <thead><tr><th>File</th><th>Job</th></tr></thead>
+  <tbody>
+    <tr><td><span class="chip layer-servlet">web/AppServlet.java</span></td><td>Parent class of every servlet. Helpers to render a JSP (forward), redirect, and read the logged-in User ID from the session</td></tr>
+    <tr><td><span class="chip layer-servlet">web/*Servlet.java</span></td><td>One servlet per URL, as in the table above</td></tr>
+    <tr><td><span class="chip layer-servlet">web/AuthFilter.java</span></td><td>Guards <code>/home</code> and <code>/photo</code>; stops the browser caching private pages</td></tr>
+    <tr><td><span class="chip layer-servlet">web/SecurityHeadersFilter.java</span></td><td>Adds Content-Security-Policy and other security headers to every response</td></tr>
+    <tr><td><span class="chip layer-servlet">web/AppContextListener.java</span></td><td>Runs once at startup: reads the database settings, runs <code>schema.sql</code>, and shares one <code>UserDao</code> with every servlet</td></tr>
+    <tr><td><span class="chip layer-db">db/Database.java</span></td><td>Holds the JDBC URL, user, and password; opens a new <code>Connection</code> for each query; runs <code>schema.sql</code></td></tr>
+    <tr><td><span class="chip layer-db">db/UserDao.java</span></td><td>Every SQL statement in the app (listed below)</td></tr>
+    <tr><td><span class="chip">security/PasswordHasher.java</span></td><td>Hashes passwords with salted PBKDF2 and checks a password against a stored hash</td></tr>
+    <tr><td><span class="chip">validation/Validator.java</span></td><td>Form rules: required fields, allowed characters and lengths, email and date formats, matching passwords, photo size and type</td></tr>
+    <tr><td><span class="chip">validation/ImageTypes.java</span></td><td>Checks an upload really is a JPEG, PNG, GIF, or WebP by its first bytes</td></tr>
+    <tr><td><span class="chip">model/User.java</span>, <span class="chip">Photo</span>, <span class="chip">Registration</span></td><td>Plain data holders passed between the layers</td></tr>
+    <tr><td><span class="chip layer-jsp">WEB-INF/views/*.jsp</span></td><td>The six pages: login, register, registered, forgot-password, home, error</td></tr>
+    <tr><td><span class="chip layer-jsp">WEB-INF/jspf/*.jspf</span></td><td>Shared fragments: <code>prelude</code> (tag libraries, added to every JSP), <code>head</code>, <code>brand</code></td></tr>
+    <tr><td><span class="chip layer-jsp">WEB-INF/tags/field.tag</span></td><td>A reusable labelled input with a hint and an inline error</td></tr>
+    <tr><td><span class="chip layer-tomcat">WEB-INF/web.xml</span></td><td>App configuration: database settings, session timeout, UTF-8, error pages</td></tr>
+    <tr><td><span class="chip layer-tomcat">META-INF/context.xml</span></td><td>Tells Tomcat to mark the session cookie <code>SameSite=Lax</code></td></tr>
+    <tr><td><span class="chip layer-db">resources/schema.sql</span></td><td>Creates the <code>users</code> table if it does not exist</td></tr>
+    <tr><td><span class="chip">pom.xml</span></td><td>Maven build: dependencies (Servlet API, JSTL, H2, JUnit) and the plugin that runs Tomcat 11</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 class="wide">Every SQL statement</h2>
+<p>All in <span class="chip layer-db">db/UserDao.java</span>. Each <code>?</code> is filled in by a <code>PreparedStatement</code>, never by gluing strings together.</p>
+<div class="wide table-scroll">
+<table>
+  <thead><tr><th>Method</th><th>SQL</th><th>Used by</th></tr></thead>
+  <tbody>
+    <tr><td><code>findPasswordHash</code></td><td><code class="wrap">SELECT password_hash FROM users WHERE user_id = ?</code></td><td>Login</td></tr>
+    <tr><td><code>findByUserId</code></td><td><code class="wrap">SELECT user_id, first_name, last_name, email, date_of_birth, created_at FROM users WHERE user_id = ?</code></td><td>Home</td></tr>
+    <tr><td><code>findPhoto</code></td><td><code class="wrap">SELECT photo, photo_type FROM users WHERE user_id = ?</code></td><td>Photo</td></tr>
+    <tr><td><code>userIdExists</code></td><td><code class="wrap">SELECT 1 FROM users WHERE user_id = ?</code></td><td>Register</td></tr>
+    <tr><td><code>emailExists</code></td><td><code class="wrap">SELECT 1 FROM users WHERE email = ?</code></td><td>Register</td></tr>
+    <tr><td><code>create</code></td><td><code class="wrap">INSERT INTO users (user_id, first_name, last_name, email, date_of_birth, photo, photo_type, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)</code></td><td>Register</td></tr>
+    <tr><td><code>identityMatches</code></td><td><code class="wrap">SELECT 1 FROM users WHERE user_id = ? AND email = ? AND date_of_birth = ?</code></td><td>Forgot password</td></tr>
+    <tr><td><code>updatePassword</code></td><td><code class="wrap">UPDATE users SET password_hash = ? WHERE user_id = ?</code></td><td>Forgot password</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Run it</h2>
+<p>From a checkout of the <code>feat/project-5-jsp-login</code> branch, in <code>Project_5_JSP_Login/</code>. The project needs JDK 17; this Mac's default <code>java</code> is 11, so point Maven at 17:</p>
+<pre class="wide layer-tomcat"><code>JAVA_HOME=$(/usr/libexec/java_home -v 17) ./mvnw package cargo:run</code></pre>
+<p>Then open <a href="http://localhost:8080/jsp-login">localhost:8080/jsp-login</a>. Stop with Ctrl+C. The database file lives in <code>~/.jsp-login/</code>.</p>
+
+</main>
+</body>
+</html>

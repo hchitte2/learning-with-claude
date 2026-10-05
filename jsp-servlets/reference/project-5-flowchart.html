@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project 5 flow charts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main class="page">
+
+<p class="course-line"><a href="../lessons/0001-the-login-click.html">Explaining Project 5</a>, reference sheet</p>
+<h1>Project 5 flow charts</h1>
+<p class="lead">Three views of the same app: the pages a user moves through, what happens inside one request, and what happens when the app starts.</p>
+
+<p>Read them in order. Each one zooms in on the one before. The colours are the same layer colours as the lessons: <span class="chip plain layer-browser">browser</span> <span class="chip plain layer-tomcat">Tomcat</span> <span class="chip plain layer-servlet">servlets and filters</span> <span class="chip plain layer-jsp">JSP pages</span> <span class="chip plain layer-db">database</span>.</p>
+
+<h2>What the user sees</h2>
+<p>The app has five pages, and <strong>Log in</strong> is the hub: every path ends back there. Each diamond is a check that Java code makes after the user submits a form; the class that makes it is named underneath.</p>
+
+<figure class="wide bleed">
+<div class="fc-scroll">
+<svg class="fc" viewBox="0 0 1040 725" role="img" aria-label="Flow chart of the pages in Project 5. Opening the app redirects to the Log in page. Submitting it checks the password in LoginServlet: if it does not match, the Log in page shows an error; if it matches, a new session starts and AuthFilter lets the user through to the Home page. From Home, Log out returns to Log in. From Log in, Create an account leads to the registration page; RegisterServlet checks the form and that the User ID and email are free, then shows Account created, which links back to Log in. Forgot password leads to the reset page; ForgotPasswordServlet checks User ID, email, and birth date, saves the new password, and returns to Log in.">
+  <defs>
+    <marker id="f1-arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="f1-arrow-main" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="head main" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+
+  <!-- Legend -->
+  <rect class="box layer-jsp" x="24" y="24" width="26" height="16" rx="4"/>
+  <text x="60" y="36">A page the user sees</text>
+  <polygon class="box layer-servlet" points="37,50 51,58 37,66 23,58"/>
+  <text x="60" y="62">A check made in Java</text>
+  <rect class="connector" x="24" y="74" width="26" height="16" rx="8"/>
+  <text x="60" y="86">Back to the Log in page</text>
+  <line class="edge main" x1="24" y1="106" x2="50" y2="106"/>
+  <text x="60" y="110">A successful login</text>
+
+  <!-- Start -->
+  <rect class="box layer-browser" x="420" y="27" width="160" height="36" rx="18"/>
+  <text class="t-title" x="500" y="50" text-anchor="middle">Open the app</text>
+  <path class="edge main" d="M500 63 V128" marker-end="url(#f1-arrow-main)"/>
+  <text class="t-label" x="510" y="100">redirects</text>
+
+  <!-- Log in -->
+  <rect class="box layer-jsp" x="405" y="130" width="190" height="60" rx="8"/>
+  <text class="t-title" x="500" y="157" text-anchor="middle">Log in</text>
+  <text class="t-mono" x="500" y="175" text-anchor="middle">/login</text>
+
+  <!-- Links out of Log in -->
+  <path class="edge" d="M425 190 V222 H160 V268" marker-end="url(#f1-arrow)"/>
+  <text class="t-label" x="292" y="214" text-anchor="middle">Create an account</text>
+  <path class="edge" d="M575 190 V222 H880 V268" marker-end="url(#f1-arrow)"/>
+  <text class="t-label" x="728" y="214" text-anchor="middle">Forgot password?</text>
+  <path class="edge main" d="M500 190 V244" marker-end="url(#f1-arrow-main)"/>
+  <text class="t-label" x="510" y="226">submit</text>
+
+  <!-- Left lane: registration -->
+  <rect class="box layer-jsp" x="80" y="270" width="160" height="60" rx="8"/>
+  <text class="t-title" x="160" y="297" text-anchor="middle">Create an account</text>
+  <text class="t-mono" x="160" y="315" text-anchor="middle">/register</text>
+  <path class="edge" d="M160 330 V394" marker-end="url(#f1-arrow)"/>
+  <text class="t-label" x="170" y="366">submit</text>
+
+  <polygon class="box layer-servlet" points="160,396 255,450 160,504 65,450"/>
+  <text x="160" y="436" text-anchor="middle">Form valid, ID</text>
+  <text x="160" y="451" text-anchor="middle">and email free?</text>
+  <text class="t-class" x="160" y="466" text-anchor="middle">RegisterServlet</text>
+  <path class="edge" d="M65 450 H30 V300 H78" marker-end="url(#f1-arrow)"/>
+  <text class="t-label" x="47" y="443" text-anchor="middle">no</text>
+  <path class="edge" d="M160 504 V558" marker-end="url(#f1-arrow)"/>
+  <text class="t-label" x="170" y="535">yes: saves the user</text>
+
+  <rect class="box layer-jsp" x="80" y="560" width="160" height="60" rx="8"/>
+  <text class="t-title" x="160" y="587" text-anchor="middle">Account created</text>
+  <text class="t-mono" x="160" y="605" text-anchor="middle">/registered</text>
+  <path class="edge" d="M160 620 V666" marker-end="url(#f1-arrow)"/>
+  <text class="t-label" x="170" y="647">Go to log in</text>
+
+  <rect class="connector" x="98" y="668" width="124" height="42" rx="21"/>
+  <text class="t-title" x="160" y="686" text-anchor="middle">Log in</text>
+  <text class="t-mono" x="160" y="701" text-anchor="middle">/login</text>
+
+  <!-- Centre lane: logging in -->
+  <polygon class="box layer-servlet" points="500,246 595,300 500,354 405,300"/>
+  <text x="500" y="286" text-anchor="middle">Password</text>
+  <text x="500" y="301" text-anchor="middle">matches?</text>
+  <text class="t-class" x="500" y="316" text-anchor="middle">LoginServlet</text>
+  <path class="edge" d="M405 300 H382" marker-end="url(#f1-arrow)"/>
+  <text class="t-label" x="394" y="292" text-anchor="middle">no</text>
+  <rect class="connector" x="268" y="279" width="112" height="42" rx="21"/>
+  <text class="t-title" x="324" y="297" text-anchor="middle">Log in</text>
+  <text class="t-small" x="324" y="312" text-anchor="middle">+ error message</text>
+
+  <path class="edge main" d="M500 354 V394" marker-end="url(#f1-arrow-main)"/>
+  <text class="t-label" x="510" y="378">yes: new session</text>
+
+  <polygon class="box layer-servlet" points="500,396 595,450 500,504 405,450"/>
+  <text x="500" y="447" text-anchor="middle">Logged in?</text>
+  <text class="t-class" x="500" y="463" text-anchor="middle">AuthFilter</text>
+  <path class="edge" d="M595 450 H634" marker-end="url(#f1-arrow)"/>
+  <text class="t-label" x="614" y="442" text-anchor="middle">no</text>
+  <rect class="connector" x="636" y="429" width="124" height="42" rx="21"/>
+  <text class="t-title" x="698" y="447" text-anchor="middle">Log in</text>
+  <text class="t-mono" x="698" y="462" text-anchor="middle">/login?required</text>
+
+  <path class="edge main" d="M500 504 V558" marker-end="url(#f1-arrow-main)"/>
+  <text class="t-label" x="510" y="535">yes</text>
+
+  <rect class="box layer-jsp" x="405" y="560" width="190" height="60" rx="8"/>
+  <text class="t-title" x="500" y="587" text-anchor="middle">Home</text>
+  <text class="t-mono" x="500" y="605" text-anchor="middle">/home</text>
+  <path class="edge" d="M500 620 V666" marker-end="url(#f1-arrow)"/>
+  <text class="t-label" x="510" y="647">Log out (ends the session)</text>
+
+  <rect class="connector" x="438" y="668" width="124" height="42" rx="21"/>
+  <text class="t-title" x="500" y="686" text-anchor="middle">Log in</text>
+  <text class="t-mono" x="500" y="701" text-anchor="middle">/login?loggedOut</text>
+
+  <!-- Right lane: password reset -->
+  <rect class="box layer-jsp" x="800" y="270" width="160" height="60" rx="8"/>
+  <text class="t-title" x="880" y="297" text-anchor="middle">Reset password</text>
+  <text class="t-mono" x="880" y="315" text-anchor="middle">/forgot-password</text>
+  <path class="edge" d="M880 330 V394" marker-end="url(#f1-arrow)"/>
+  <text class="t-label" x="890" y="366">submit</text>
+
+  <polygon class="box layer-servlet" points="880,396 975,450 880,504 785,450"/>
+  <text x="880" y="436" text-anchor="middle">ID, email, birth</text>
+  <text x="880" y="451" text-anchor="middle">date all match?</text>
+  <text class="t-class" x="880" y="466" text-anchor="middle">ForgotPasswordServlet</text>
+  <path class="edge" d="M975 450 H1010 V300 H962" marker-end="url(#f1-arrow)"/>
+  <text class="t-label" x="992" y="443" text-anchor="middle">no</text>
+  <path class="edge" d="M880 504 V558" marker-end="url(#f1-arrow)"/>
+  <text class="t-label" x="890" y="535">yes: saves new password</text>
+
+  <rect class="connector" x="818" y="560" width="124" height="42" rx="21"/>
+  <text class="t-title" x="880" y="578" text-anchor="middle">Log in</text>
+  <text class="t-mono" x="880" y="593" text-anchor="middle">/login?reset</text>
+</svg>
+</div>
+<figcaption>Every path returns to Log in. The part after <code>?</code> in each return address, such as <code>?loggedOut</code>, tells <code>login.jsp</code> which message to show: “You’ve logged out,” “Your password has been reset,” or “Log in to see that page.” The <code>AuthFilter</code> check runs on <em>every</em> request for <code>/home</code> and <code>/photo</code>, so typing <code>/home</code> without logging in also lands on <code>/login?required</code>.</figcaption>
+</figure>
+
+<h2>Inside one request</h2>
+<p>Zoom into any arrow above and you find the same machinery. Tomcat passes the request through two filters, a servlet decides what to do, <code>UserDao</code> talks to the database, and the answer goes back as an HTML page or a redirect.</p>
+
+<figure class="wide bleed">
+<div class="fc-scroll">
+<svg class="fc" viewBox="0 0 1060 440" role="img" aria-label="Diagram of one request. The browser sends a request into Tomcat. It passes SecurityHeadersFilter, then AuthFilter for /home and /photo only, then reaches a servlet. The servlet uses helper classes to check input and hash passwords, and asks UserDao to find or save a user. UserDao sends SQL over JDBC to the H2 database engine running inside the same Java process, which stores data in a file in ~/.jsp-login. The servlet then either forwards to a JSP view, which sends an HTML page back to the browser, or sends the browser a 302 redirect.">
+  <defs>
+    <marker id="f2-arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+
+  <!-- Browser -->
+  <rect class="box layer-browser" x="20" y="60" width="120" height="340" rx="8"/>
+  <text class="t-title" x="80" y="86" text-anchor="middle">Browser</text>
+
+  <!-- Tomcat -->
+  <rect class="container" x="175" y="20" width="740" height="405" rx="12"/>
+  <text class="t-title" x="193" y="44">Tomcat, the servlet container</text>
+  <text class="t-small" x="193" y="413">everything in this box runs in one Java process</text>
+
+  <!-- Filters and servlet -->
+  <path class="edge" d="M140 120 H198" marker-end="url(#f2-arrow)"/>
+  <text class="t-label" x="169" y="112" text-anchor="middle">request</text>
+
+  <rect class="box layer-servlet" x="200" y="95" width="145" height="50" rx="6"/>
+  <text class="t-title" x="272.5" y="116" text-anchor="middle">Security headers</text>
+  <text class="t-class" x="272.5" y="133" text-anchor="middle">SecurityHeadersFilter</text>
+  <text class="t-small" x="272.5" y="162" text-anchor="middle">every request</text>
+
+  <path class="edge" d="M345 120 H378" marker-end="url(#f2-arrow)"/>
+
+  <rect class="box layer-servlet" x="380" y="95" width="115" height="50" rx="6"/>
+  <text class="t-title" x="437.5" y="116" text-anchor="middle">Login check</text>
+  <text class="t-class" x="437.5" y="133" text-anchor="middle">AuthFilter</text>
+  <text class="t-small" x="437.5" y="162" text-anchor="middle">only /home and /photo</text>
+
+  <path class="edge" d="M495 120 H528" marker-end="url(#f2-arrow)"/>
+  <path class="edge" d="M272 95 V80 H592 V93" marker-end="url(#f2-arrow)"/>
+  <text class="t-label" x="432" y="74" text-anchor="middle">other URLs skip the login check</text>
+
+  <rect class="box layer-servlet" x="530" y="95" width="125" height="130" rx="6"/>
+  <text class="t-title" x="592.5" y="118" text-anchor="middle">Servlet</text>
+  <text class="t-class" x="592.5" y="135" text-anchor="middle">LoginServlet, …</text>
+  <text class="t-small" x="592.5" y="168" text-anchor="middle">reads the form,</text>
+  <text class="t-small" x="592.5" y="182" text-anchor="middle">decides what</text>
+  <text class="t-small" x="592.5" y="196" text-anchor="middle">happens next</text>
+
+  <!-- Helpers, DAO, database -->
+  <path class="edge" d="M655 120 H743" marker-end="url(#f2-arrow)"/>
+  <text class="t-label" x="700" y="112" text-anchor="middle">checks, hashes</text>
+  <rect class="box" x="745" y="95" width="150" height="50" rx="6"/>
+  <text class="t-title" x="820" y="116" text-anchor="middle">Helpers</text>
+  <text class="t-class" x="820" y="133" text-anchor="middle">Validator, PasswordHasher</text>
+
+  <path class="edge" d="M655 200 H743" marker-start="url(#f2-arrow)" marker-end="url(#f2-arrow)"/>
+  <text class="t-label" x="700" y="192" text-anchor="middle">find, save</text>
+  <rect class="box layer-db" x="745" y="175" width="150" height="50" rx="6"/>
+  <text class="t-title" x="820" y="196" text-anchor="middle">UserDao</text>
+  <text class="t-small" x="820" y="213" text-anchor="middle">all the SQL</text>
+
+  <path class="edge" d="M820 225 V288" marker-start="url(#f2-arrow)" marker-end="url(#f2-arrow)"/>
+  <text class="t-label" x="828" y="260">SQL via JDBC</text>
+  <rect class="box layer-db" x="745" y="290" width="150" height="50" rx="6"/>
+  <text class="t-title" x="820" y="311" text-anchor="middle">H2 engine</text>
+  <text class="t-small" x="820" y="328" text-anchor="middle">JDBC driver, in-process</text>
+
+  <path class="edge" d="M895 315 H948" marker-start="url(#f2-arrow)" marker-end="url(#f2-arrow)"/>
+  <text class="t-label" x="921" y="307" text-anchor="middle">stores</text>
+  <path class="box layer-db" d="M950 292 V340 A45 9 0 0 0 1040 340 V292 Z"/>
+  <ellipse class="box layer-db" cx="995" cy="292" rx="45" ry="9"/>
+  <text class="t-title" x="995" y="320" text-anchor="middle">Database</text>
+  <text class="t-small" x="995" y="334" text-anchor="middle">file on disk</text>
+  <text class="t-mono" x="995" y="368" text-anchor="middle">~/.jsp-login/</text>
+
+  <!-- Responses -->
+  <path class="edge" d="M615 225 V298" marker-end="url(#f2-arrow)"/>
+  <text class="t-label" x="623" y="268">forward, with data</text>
+  <rect class="box layer-jsp" x="530" y="300" width="125" height="50" rx="6"/>
+  <text class="t-title" x="592.5" y="321" text-anchor="middle">JSP view</text>
+  <text class="t-class" x="592.5" y="338" text-anchor="middle">login.jsp, …</text>
+
+  <path class="edge" d="M560 225 V258 H142" marker-end="url(#f2-arrow)"/>
+  <text class="t-label" x="350" y="250" text-anchor="middle">or: redirect (302) to another URL</text>
+  <path class="edge" d="M530 325 H142" marker-end="url(#f2-arrow)"/>
+  <text class="t-label" x="350" y="317" text-anchor="middle">HTML page</text>
+</svg>
+</div>
+<figcaption>A servlet ends a request in one of two ways: it <em>forwards</em> to a JSP, which renders HTML (wrong password, form errors, the Home page), or it <em>redirects</em>, telling the browser to request another URL (after a successful login, registration, reset, or logout). <code>PhotoServlet</code> is the one exception: it writes the image bytes straight into the response. H2 is an <em>embedded</em> database, so its engine runs inside Tomcat’s Java process and keeps the data in a file.</figcaption>
+</figure>
+
+<h2>Before the first request: startup</h2>
+<p>One thing happens before any user arrives. When Tomcat starts the app, a listener sets up the database once and shares a single <code>UserDao</code> with every servlet.</p>
+
+<figure class="wide bleed">
+<div class="fc-scroll">
+<svg class="fc" viewBox="0 0 1060 235" role="img" aria-label="Startup flow. Tomcat starts the app and calls AppContextListener. The listener reads the database settings from DB environment variables or web.xml, and creates a Database object, which loads the JDBC driver and runs schema.sql to create the users table if it is missing. The listener then stores one UserDao in the ServletContext, which provides it to every servlet through userDao().">
+  <defs>
+    <marker id="f3-arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+
+  <rect class="box layer-tomcat" x="20" y="72" width="150" height="56" rx="6"/>
+  <text class="t-title" x="95" y="97" text-anchor="middle">Tomcat starts</text>
+  <text class="t-small" x="95" y="114" text-anchor="middle">deploys the app</text>
+
+  <path class="edge" d="M170 100 H228" marker-end="url(#f3-arrow)"/>
+  <text class="t-label" x="199" y="92" text-anchor="middle">calls</text>
+
+  <rect class="box layer-servlet" x="230" y="72" width="180" height="56" rx="6"/>
+  <text class="t-title" x="320" y="97" text-anchor="middle">AppContextListener</text>
+  <text class="t-class" x="320" y="114" text-anchor="middle">contextInitialized()</text>
+
+  <rect class="box" x="230" y="165" width="180" height="50" rx="6"/>
+  <text class="t-title" x="320" y="186" text-anchor="middle">Database settings</text>
+  <text class="t-small" x="320" y="203" text-anchor="middle">DB_* env vars, else web.xml</text>
+  <path class="edge" d="M320 165 V130" marker-end="url(#f3-arrow)"/>
+  <text class="t-label" x="328" y="152">reads</text>
+
+  <path class="edge" d="M410 100 H488" marker-end="url(#f3-arrow)"/>
+  <text class="t-label" x="449" y="92" text-anchor="middle">creates</text>
+
+  <rect class="box layer-db" x="490" y="72" width="150" height="56" rx="6"/>
+  <text class="t-title" x="565" y="97" text-anchor="middle">Database</text>
+  <text class="t-small" x="565" y="114" text-anchor="middle">loads the JDBC driver</text>
+
+  <path class="edge" d="M565 128 V158" marker-end="url(#f3-arrow)"/>
+  <text class="t-label" x="573" y="147">runs schema.sql</text>
+  <path class="box layer-db" d="M505 168 V212 A60 8 0 0 0 625 212 V168 Z"/>
+  <ellipse class="box layer-db" cx="565" cy="168" rx="60" ry="8"/>
+  <text class="t-title" x="565" y="194" text-anchor="middle">users table</text>
+  <text class="t-small" x="565" y="208" text-anchor="middle">created if missing</text>
+
+  <path class="edge" d="M320 72 V40 H785 V70" marker-end="url(#f3-arrow)"/>
+  <text class="t-label" x="552" y="33" text-anchor="middle">stores one UserDao in</text>
+
+  <rect class="box layer-tomcat" x="710" y="72" width="150" height="56" rx="6"/>
+  <text class="t-title" x="785" y="97" text-anchor="middle">ServletContext</text>
+  <text class="t-small" x="785" y="114" text-anchor="middle">shared by the whole app</text>
+
+  <path class="edge" d="M860 100 H918" marker-end="url(#f3-arrow)"/>
+  <text class="t-label" x="889" y="92" text-anchor="middle">provides</text>
+
+  <rect class="box layer-servlet" x="920" y="72" width="125" height="56" rx="6"/>
+  <text class="t-title" x="982.5" y="97" text-anchor="middle">Every servlet</text>
+  <text class="t-class" x="982.5" y="114" text-anchor="middle">userDao()</text>
+</svg>
+</div>
+<figcaption>Because <code>schema.sql</code> says <code>CREATE TABLE IF NOT EXISTS</code>, running it on every start is safe. If the database can’t be reached, the listener throws an error and the app does not start, so a broken database fails loudly instead of on a user’s first login.</figcaption>
+</figure>
+
+<h2>Say it in four sentences</h2>
+<p class="sidenote">Practise this out loud with the 60-second timer in <a href="../lessons/0001-the-login-click.html">lesson 1</a>.</p>
+<div class="model-answer">
+  <p>“Project 5 is an MVC web app running on Tomcat: servlets are the controllers, JSPs are the views, and a DAO holds all the SQL. At startup, a listener connects to an embedded H2 database over JDBC, creates the <code>users</code> table if it’s missing, and shares one <code>UserDao</code> with every servlet. Each request passes a security-headers filter, and private pages also pass a login check; then a servlet validates the input, calls <code>UserDao</code>, and either forwards to a JSP or redirects the browser. Users move between five pages, Log in, Create an account, Account created, Reset password, and Home, and every path ends back at Log in.”</p>
+</div>
+
+<p class="ask">Want a flow chart of something else, such as what happens inside Create an account step by step? Ask me in Claude Code.</p>
+
+<nav class="lesson-nav wide">
+  <a href="../lessons/0001-the-login-click.html">Lesson 1: the login click</a>
+  <a href="project-5-map.html">Reference: Project 5 map</a>
+</nav>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remembering who is logged in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main class="page">
+
+<p class="course-line"><a href="0001-the-login-click.html">Explaining Project 5</a>, lesson 2</p>
+<h1>How the app remembers who is logged in</h1>
+<p class="lead">By the end of this lesson you can explain how Project 5 knows it’s still you on your next click, and the three things it does to keep that safe.</p>
+
+<h2>Warm-up from lesson 1</h2>
+<p>From memory, before anything new. Retrieving last lesson’s ideas a day later is what makes them stick.</p>
+
+<section class="practice wide">
+<div class="q mcq">
+  <p class="prompt">Which part of Project 5 decides between showing an error and redirecting to <code>/home</code>?</p>
+  <div class="options">
+    <button type="button">Tomcat</button>
+    <button type="button" data-correct><code>LoginServlet</code></button>
+    <button type="button"><code>UserDao</code></button>
+    <button type="button"><code>login.jsp</code></button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>The servlet is the controller: it decides. <code>UserDao</code> only fetches data, and <code>login.jsp</code> only draws the page.</p></div>
+</div>
+
+<div class="q mcq">
+  <p class="prompt">What does a redirect tell the browser to do?</p>
+  <div class="options" data-shuffle>
+    <button type="button" data-correct>Send a new request to another URL.</button>
+    <button type="button">Show the HTML page it already received.</button>
+    <button type="button">Run the servlet again with new data.</button>
+    <button type="button">Store the page in the browser cache.</button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>A redirect is a short response (<code>302</code> plus a <code>Location</code> header). The browser follows it with a brand-new request. Hold on to that: it is exactly why this lesson is needed.</p></div>
+</div>
+</section>
+
+<h2>The problem: HTTP forgets</h2>
+<p class="sidenote">“The Hypertext Transfer Protocol (HTTP) is by design a stateless protocol.” The first sentence of the <a href="https://jakarta.ee/specifications/servlet/6.1/jakarta-servlet-spec-6.1#sessions">Jakarta Servlet specification, chapter 7, “Sessions”</a>.</p>
+<p>After a correct password, <code>LoginServlet</code> redirects, and the browser sends a brand-new request: <code>GET /home</code>. Nothing in that request says “this is Ada, who just logged in.” HTTP is <strong>stateless</strong>: every request arrives on its own, with no memory of the one before.</p>
+<p>Yet <code>HomeServlet</code> greets Ada by name. Something must carry “who is this?” from one request to the next. That something is a <strong>session</strong>.</p>
+
+<h2>A ticket and a locker</h2>
+<p class="sidenote">Cookies exist for exactly this: “Session management: User sign-in status, shopping cart contents…” <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies">MDN, “Using HTTP cookies”</a>. The name <code>JSESSIONID</code> is set by the <a href="https://jakarta.ee/specifications/servlet/6.1/jakarta-servlet-spec-6.1#cookies-2">Servlet specification, §7.1.1</a>.</p>
+<p>Think of a cloakroom. Tomcat keeps a small locker on the server for each visitor: the <strong>session</strong>, a Java object of type <code>HttpSession</code>. Each locker has a long random number. Tomcat hands the browser that number as a <strong>cookie</strong> called <code>JSESSIONID</code>, and the browser shows it on every request after that. Tomcat reads the number and opens the right locker.</p>
+<p>These are real headers from your app, captured from a test copy on 5 October 2026:</p>
+
+<figure class="wide">
+<pre class="http"><code><span class="dim"># Tomcat’s response to a correct login (POST /login)</span>
+HTTP/1.1 302
+<mark>Set-Cookie: JSESSIONID=4EE2E79B058D4AF95F52299C2E3605AD</mark>; Path=/jsp-login;
+            HttpOnly; SameSite=Lax
+Location: /jsp-login/home
+
+<span class="dim"># The browser’s next request, and every one after it</span>
+<span class="method">GET</span> /jsp-login/home HTTP/1.1
+<mark>Cookie: JSESSIONID=4EE2E79B058D4AF95F52299C2E3605AD</mark></code></pre>
+<figcaption>The <code>Set-Cookie</code> line is wrapped here to fit; it is one line on the wire. <code>Set-Cookie</code> hands out the ticket; <code>Cookie</code> shows it. The browser stores nothing else about you: the User ID lives in the locker, on the server.</figcaption>
+</figure>
+
+<p>Project 5 puts exactly one thing in the locker: the User ID. Two pieces of code do all the work.</p>
+
+<figure class="wide">
+<pre class="layer-servlet"><code><span class="dim">// LoginServlet, once the password checks out</span>
+req.<mark>getSession(true)</mark>.setAttribute(SESSION_USER, userId);   <span class="dim">// SESSION_USER is "userId"</span>
+
+<span class="dim">// AppServlet: how every servlet and AuthFilter ask “who is this?”</span>
+static String currentUserId(HttpServletRequest req) {
+    HttpSession session = req.<mark>getSession(false)</mark>;
+    return session == null ? null : (String) session.getAttribute(SESSION_USER);
+}</code></pre>
+<figcaption><code>web/LoginServlet.java</code> line 57 and <code>web/AppServlet.java</code> lines 30–33. <code>getSession(true)</code> means “find this visitor’s locker, or make one.” <code>getSession(false)</code> means “find it, but don’t make one,” and returns <code>null</code> if there is none (<a href="https://jakarta.ee/specifications/servlet/6.1/apidocs/jakarta.servlet/jakarta/servlet/http/httpservletrequest">Servlet API docs</a>).</figcaption>
+</figure>
+
+<h2>The guard and the exit</h2>
+<p class="sidenote">A <strong>filter</strong> is code Tomcat runs <em>before</em> the servlet, and it can stop the request there. The flow chart of <a href="../reference/project-5-flowchart.html">one request</a> shows both of the app’s filters.</p>
+<p><strong>The guard.</strong> <span class="chip layer-servlet">AuthFilter</span> runs before every request for <code>/home</code> and <code>/photo</code>. It calls <code>currentUserId</code>; if the answer is <code>null</code>, it redirects to <code>/login?required</code> and the servlet never runs.</p>
+<p><strong>The exit.</strong> Logging out sends <code>POST /logout</code>, and <span class="chip layer-servlet">LogoutServlet</span> calls <code>session.invalidate()</code>: the locker is emptied and destroyed. The browser still holds the old ticket, but it now opens nothing. In the test, sending the old cookie to <code>/home</code> after logout got a redirect to <code>/login?required</code>.</p>
+<p><strong>The timer.</strong> <code>web.xml</code> sets <code class="wrap">&lt;session-timeout&gt;30&lt;/session-timeout&gt;</code>: a session left unused for 30 minutes is destroyed automatically.</p>
+<p class="sidenote">The timeout is in minutes: <a href="https://jakarta.ee/specifications/servlet/6.1/jakarta-servlet-spec-6.1#session-timeouts">Servlet specification, §7.5</a>.</p>
+
+<h2>Three protections an interviewer may ask about</h2>
+<p>Whoever holds the ticket gets the locker, so the session ID is as valuable as the password. The app protects it in three ways.</p>
+
+<h3>A new ticket at login</h3>
+<p class="sidenote">“The session ID regeneration is mandatory to prevent session fixation attacks.” <a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#renew-the-session-id-after-any-privilege-level-change">OWASP Session Management Cheat Sheet</a>. JSPs join a session by default (“Default is true”): <a href="https://jakarta.ee/specifications/pages/4.0/jakarta-server-pages-spec-4.0#the-page-directive">Jakarta Pages 4.0, the page directive</a>.</p>
+<p>You get a ticket before you log in: every JSP joins a session by default, so just viewing <code>login.jsp</code> creates one. In the test, the first visit got <code>JSESSIONID=71934BB6…</code>.</p>
+<p>At login, <code>LoginServlet</code> throws that session away and starts a fresh one, which is why the ID above became <code>4EE2E79B…</code>:</p>
+<pre class="wide layer-servlet"><code>HttpSession old = req.getSession(false);
+if (old != null) {
+    <mark>old.invalidate();</mark>
+}
+req.<mark>getSession(true)</mark>.setAttribute(SESSION_USER, userId);</code></pre>
+<p>This stops <strong>session fixation</strong>: an attacker who planted a known session ID in your browser before you logged in would otherwise be logged in as you the moment you did.</p>
+
+<h3>A ticket scripts can’t read and other sites can’t use</h3>
+<p class="sidenote"><code>HttpOnly</code>: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies#security">MDN, cookie security</a>. <code>Lax</code>: “the browser only sends the cookie in same-site requests and cross-site top level GET requests.” <a href="https://tomcat.apache.org/tomcat-11.0-doc/config/cookie-processor.html">Tomcat 11, Cookie Processor</a>.</p>
+<ul>
+  <li><strong><code>HttpOnly</code></strong>, set in <code>web.xml</code>: JavaScript on the page cannot read the cookie, so even a script injected into a page couldn’t steal the ticket.</li>
+  <li><strong><code>SameSite=Lax</code></strong>, set in <code>META-INF/context.xml</code>: if another website tries to make your browser <code>POST</code> to the app, the browser leaves the ticket out. This is a basic defence against <strong>cross-site request forgery</strong> (CSRF).</li>
+</ul>
+
+<h3>A logout that can’t happen by accident, and leaves nothing behind</h3>
+<p class="sidenote">GET requests “should only retrieve data”: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods">MDN, HTTP request methods</a>. <code>no-store</code> means “any caches of any kind (private or shared) should not store this response”: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cache-Control">MDN, Cache-Control</a>.</p>
+<ul>
+  <li><strong>Logout is a POST.</strong> A GET should only read, never change anything. A plain link could be followed by a browser prefetching pages, logging you out without a click. In the test, <code>GET /logout</code> just redirects to <code>/home</code>.</li>
+  <li><strong>Private pages are sent <code>Cache-Control: no-store</code></strong> by <code>AuthFilter</code>, so the browser keeps no copy of your Home page. After logout, Back can’t show it from a stored copy.</li>
+</ul>
+
+<h2>See it in your own browser</h2>
+<p>Now watch the ticket change hands. This takes five minutes and gives you something to show Ithena live.</p>
+<ul class="checklist wide">
+  <li><label><input type="checkbox"> Start the app from <code class="wrap">~/Ithena_Intro_Assignment/Project_5_JSP_Login</code> (the code is on <code>main</code> now): <code class="wrap">JAVA_HOME=$(/usr/libexec/java_home -v 17) ./mvnw package cargo:run</code></label></li>
+  <li><label><input type="checkbox"> Open <code>localhost:8080/jsp-login</code> in Chrome, then DevTools (⌥⌘I) → <strong>Application</strong> → <strong>Cookies</strong>. Find <code>JSESSIONID</code> and note its first four characters. Check the <em>HttpOnly</em> tick and <em>SameSite: Lax</em>.</label></li>
+  <li><label><input type="checkbox"> Log in (register first if you need an account). Look at <code>JSESSIONID</code> again: it should be a different value. That is the session fixation defence, happening in front of you.</label></li>
+  <li><label><input type="checkbox"> In the <strong>Console</strong> tab, type <code>document.cookie</code> and press Return. <code>JSESSIONID</code> is not in the result (often it is just an empty string): <code>HttpOnly</code> hides the ticket from JavaScript.</label></li>
+  <li><label><input type="checkbox"> Click <strong>Log out</strong>, then press the browser’s Back button. You should end up on Log in, not on your Home page.</label></li>
+</ul>
+<p class="small">If any step surprises you, tell me what you saw. A surprise is the most useful thing a lab can produce.</p>
+
+<h2>Practice</h2>
+<p>Answer from memory, without scrolling up.</p>
+
+<section class="practice wide">
+
+<div class="q order">
+  <p class="prompt">Put one visit, from first page to logout, in order.</p>
+  <div class="order-lists">
+    <div><h4>Steps</h4>
+      <ol class="pool"><li>Viewing the login page gives the browser a <code>JSESSIONID</code></li><li>The correct password swaps that session for a new one</li><li><code>LoginServlet</code> stores the User ID in the new session</li><li><code>AuthFilter</code> finds the User ID and lets <code>/home</code> through</li><li><code>POST /logout</code> invalidates the session</li></ol>
+    </div>
+    <div><h4>Your order</h4><ol class="answer"></ol></div>
+  </div>
+  <div class="controls">
+    <button type="button" class="btn primary" data-check>Check order</button>
+    <button type="button" class="btn" data-reset>Start over</button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>Ticket, new ticket, fill the locker, check the locker, destroy the locker.</p></div>
+</div>
+
+<div class="q mcq">
+  <p class="prompt">What does the <code>JSESSIONID</code> cookie contain?</p>
+  <div class="options" data-shuffle>
+    <button type="button" data-correct>A random ID pointing to a session.</button>
+    <button type="button">The User ID and the password hash.</button>
+    <button type="button">The User ID, encrypted by Tomcat first.</button>
+    <button type="button">A copy of the user’s database row.</button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>Only the ticket number travels. The User ID stays in the session on the server, which is why the cookie is worth protecting but reveals nothing by itself.</p></div>
+</div>
+
+<div class="q mcq">
+  <p class="prompt">Which part checks for a logged-in user before <code>/home</code> runs?</p>
+  <div class="options">
+    <button type="button">Tomcat</button>
+    <button type="button"><code>LoginServlet</code></button>
+    <button type="button" data-correct><code>AuthFilter</code></button>
+    <button type="button"><code>HomeServlet</code></button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>A filter runs before the servlet. <code>AuthFilter</code> guards <code>/home</code> and <code>/photo</code>, so <code>HomeServlet</code> can assume someone is logged in.</p></div>
+</div>
+
+<div class="q mcq">
+  <p class="prompt">Why does <code>LoginServlet</code> throw away the old session at login?</p>
+  <div class="options" data-shuffle>
+    <button type="button" data-correct>So a planted session ID becomes useless.</button>
+    <button type="button">So the old error messages get cleared.</button>
+    <button type="button">So Tomcat frees memory for new users.</button>
+    <button type="button">So the browser deletes its old cookies.</button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>That is the session fixation defence. If the ID survived login, anyone who knew it beforehand would share your logged-in session.</p></div>
+</div>
+
+<div class="q mcq">
+  <p class="prompt">What does <code>HttpOnly</code> on the session cookie stop?</p>
+  <div class="options" data-shuffle>
+    <button type="button" data-correct>JavaScript on the page reading the cookie.</button>
+    <button type="button">The cookie being sent over plain HTTP.</button>
+    <button type="button">Other websites sending requests with the cookie.</button>
+    <button type="button">The cookie lasting longer than one hour.</button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>Plain HTTP is what the <code>Secure</code> flag addresses (production would add it with HTTPS). Cross-site requests are <code>SameSite</code>’s job. Lifetime is the 30-minute session timeout.</p></div>
+</div>
+
+<div class="q mcq">
+  <p class="prompt">You log out, then send the old cookie to <code>/home</code>. What happens?</p>
+  <div class="options" data-shuffle>
+    <button type="button" data-correct>You are sent to the login page instead.</button>
+    <button type="button">You see Home, because the cookie still exists.</button>
+    <button type="button">Tomcat creates a new session for that user.</button>
+    <button type="button">The browser shows an error and stops there.</button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>The ticket survives in the browser, but <code>invalidate()</code> destroyed the locker it pointed to. <code>AuthFilter</code> finds no User ID and redirects to <code>/login?required</code>, which is exactly what the test showed.</p></div>
+</div>
+
+<div class="q mcq">
+  <p class="prompt">Why is logout a <code>POST</code> form rather than a plain link?</p>
+  <div class="options" data-shuffle>
+    <button type="button" data-correct>A GET should only read, never change.</button>
+    <button type="button">POST requests are encrypted, but GETs aren’t.</button>
+    <button type="button">Links cannot carry the session ID cookie.</button>
+    <button type="button">Tomcat can only invalidate sessions in doPost.</button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>Logging out changes state on the server, so it must not be a GET that a prefetcher or crawler could trigger. POST is not encrypted (only HTTPS is), and links do send cookies.</p></div>
+</div>
+
+<p class="scoreboard" data-scoreboard></p>
+</section>
+
+<h2>Say it to Ithena</h2>
+<p>Start the timer and answer out loud. Then tick off what you covered.</p>
+
+<div class="rehearse wide" data-key="l2-sessions">
+  <p class="question">“How does your app know a user is logged in, and how do you keep that safe?”</p>
+  <div class="controls">
+    <button type="button" class="btn" data-timer="60">Start 60-second timer</button>
+    <span class="timer-readout"></span>
+  </div>
+  <label for="l2-notes">Notes on what you said (optional; saved in this browser)</label>
+  <textarea id="l2-notes"></textarea>
+  <div class="controls"><button type="button" class="btn primary" data-reveal>Compare with the checklist</button></div>
+  <div class="reveal" hidden>
+    <ul class="checklist">
+      <li><label><input type="checkbox"> HTTP is stateless, so the app keeps a server-side session.</label></li>
+      <li><label><input type="checkbox"> Tomcat gives the browser a <code>JSESSIONID</code> cookie, which it sends back on every request.</label></li>
+      <li><label><input type="checkbox"> At login, <code>LoginServlet</code> stores the User ID in the session.</label></li>
+      <li><label><input type="checkbox"> <code>AuthFilter</code> checks for that User ID on <code>/home</code> and <code>/photo</code>, otherwise it redirects to login.</label></li>
+      <li><label><input type="checkbox"> Login replaces the session with a new one, which prevents session fixation.</label></li>
+      <li><label><input type="checkbox"> The cookie is <code>HttpOnly</code> and <code>SameSite=Lax</code>; logout is a POST that invalidates the session; private pages are <code>no-store</code>.</label></li>
+    </ul>
+    <p class="checklist-count" aria-live="polite"></p>
+    <div class="model-answer">
+      <p>“HTTP is stateless, so I use the servlet session. When the password checks out, <code>LoginServlet</code> throws away any existing session, creates a new one, and stores the User ID in it. Creating a new one prevents session fixation. Tomcat sends the browser a <code>JSESSIONID</code> cookie, and the browser sends it back on every request, so the server can look the session up. <code>AuthFilter</code> runs before <code>/home</code> and <code>/photo</code>: no User ID in the session means a redirect to the login page. The cookie is <code>HttpOnly</code>, so scripts can’t read it, and <code>SameSite=Lax</code>, so other sites can’t post with it. Logout is a POST that invalidates the session, and private pages are sent <code>no-store</code> so Back can’t show them afterwards.”</p>
+    </div>
+  </div>
+</div>
+
+<section class="source">
+  <h2>Read next</h2>
+  <p class="sidenote">Going deeper: the <a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html">OWASP Session Management Cheat Sheet</a> is what security reviewers measure apps against. Skim its headings for the vocabulary.</p>
+  <p><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies"><strong>MDN, “Using HTTP cookies”</strong></a>. Read “What cookies are used for” and “Security.” Ten minutes, and it covers every cookie attribute in this lesson in more depth.</p>
+</section>
+
+<p class="ask">Something unclear? Ask me in Claude Code. Good questions to try: “what stops someone guessing a session ID?” or “what would change if the app ran on several servers?”</p>
+
+<nav class="lesson-nav wide">
+  <a href="0001-the-login-click.html">Lesson 1: the login click</a>
+  <a href="../reference/sessions.html">Reference: sessions cheat sheet</a>
+  <span>Next: lesson 3, how pages are built (forward, redirect, and <code>WEB-INF</code>)</span>
+</nav>
+
+</main>
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

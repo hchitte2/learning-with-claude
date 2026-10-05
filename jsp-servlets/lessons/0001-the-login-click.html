@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The login click</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main class="page">
+
+<p class="course-line">Explaining Project 5, lesson 1</p>
+<h1>What happens when you click Log in</h1>
+<p class="lead">By the end of this lesson you can walk Ithena through a login in five steps, naming the file that handles each one.</p>
+
+<p>Expect Ithena to open with some version of <em>“walk me through what happens when a user logs in.”</em> It is the whole app in one answer: all three technologies in your project title appear in it. This lesson gives you the map. Later lessons zoom in on one stop at a time.</p>
+
+<h2>Two messages: a request and a response</h2>
+
+<p class="sidenote">The browser–server conversation, step by step: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview">MDN, “An overview of HTTP”</a>.</p>
+<p>Browsers and servers talk in <strong>HTTP</strong>. Every exchange is one <strong>request</strong> from the browser and one <strong>response</strong> from the server, and both are plain text. When you press Log in, your browser sends this request:</p>
+
+<figure class="wide">
+<pre class="http"><code><span class="method">POST</span> /jsp-login/login HTTP/1.1
+Host: localhost:8080
+Content-Type: application/x-www-form-urlencoded
+
+userId=ada&amp;password=correct-horse</code></pre>
+<figcaption>The request behind the Log in button, slightly simplified. The blank line separates the headers from the body.</figcaption>
+</figure>
+
+<p class="sidenote">What each method means: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods">MDN, “HTTP request methods”</a>. How form fields become <code>name=value</code> pairs: <a href="https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Sending_and_retrieving_form_data">MDN, “Sending form data”</a>.</p>
+<p>The first line holds the <strong>method</strong> and the <strong>path</strong>. <code>GET</code> means “send me this page.” <code>POST</code> means “here is data for you to act on.” The form fields travel in the body as <code>name=value</code> pairs, named after the <code>name</code> attribute of each input in <code>login.jsp</code>.</p>
+<p>Your app uses both methods on the same path: <code>GET /login</code> shows the form, and <code>POST /login</code> checks what was typed into it.</p>
+
+<h2>The cast</h2>
+<p>Your project title names three technologies. Each does one job, and Tomcat is the program they all run inside. The colours mark each layer here and in every later lesson.</p>
+
+<p class="sidenote">“A servlet is a Jakarta technology-based web component, managed by a container, that generates dynamic content.” <a href="https://jakarta.ee/specifications/servlet/6.1/jakarta-servlet-spec-6.1#what-is-a-servlet">Jakarta Servlet 6.1 specification</a>, §1.1–1.2. A JSP “is translated to create a servlet class”: <a href="https://jakarta.ee/specifications/pages/4.0/jakarta-server-pages-spec-4.0#translation-and-execution-steps">Jakarta Pages 4.0 specification</a>. Tomcat 11 implements both (<a href="https://tomcat.apache.org/whichversion.html">Apache Tomcat versions</a>). For JDBC, <a href="https://docs.oracle.com/javase/tutorial/jdbc/basics/index.html">Oracle’s JDBC tutorial</a>.</p>
+<ul class="cast">
+  <li class="layer-browser"><span class="name">Browser</span><p>Sends requests and shows the HTML that comes back.</p></li>
+  <li class="layer-tomcat"><span class="name">Tomcat, the servlet container</span><p>A program that listens for HTTP requests, picks the servlet responsible for each URL, and hands it the request. Project 5 runs on Tomcat 11.</p></li>
+  <li class="layer-servlet"><span class="name">Servlet</span><p>A Java class that handles the requests for a URL and builds the response. <span class="chip layer-servlet">LoginServlet</span> handles <code>/login</code>. In MVC terms, the <em>controller</em>: it decides what happens.</p></li>
+  <li class="layer-jsp"><span class="name">JSP</span><p>An HTML page with placeholders such as <code>${error}</code>. Tomcat turns each JSP into a servlet behind the scenes, and its only job is to produce HTML. <span class="chip layer-jsp">login.jsp</span> is one. In MVC terms, a <em>view</em>.</p></li>
+  <li class="layer-db"><span class="name">JDBC and the database</span><p>JDBC is Java’s standard way to send SQL to a database and read the results. Only <span class="chip layer-db">UserDao</span> uses it. The database is H2, and it holds one table, <code>users</code>.</p></li>
+</ul>
+
+<h2>The journey, in five steps</h2>
+<p>Here is the login request travelling through those layers. Each step is coloured by the layer doing the work.</p>
+
+<ol class="journey wide">
+  <li class="layer-browser">
+    <span class="hop-title">The browser sends <code>POST /jsp-login/login</code></span>
+    <p>It carries the User ID and password from the form. <code>/jsp-login</code> is the name Tomcat runs the app under; <code>/login</code> is the part your code cares about.</p>
+  </li>
+
+  <li class="layer-tomcat">
+    <span class="hop-title">Tomcat hands the request to <span class="chip layer-servlet">LoginServlet</span></span>
+    <p>Tomcat knows <code>LoginServlet</code> owns <code>/login</code> because of the annotation above the class. The method is POST, so Tomcat calls <code>doPost</code>. A GET would go to <code>doGet</code> instead.</p>
+    <figure>
+<pre class="layer-servlet"><code><mark>@WebServlet("/login")</mark>
+public class LoginServlet extends AppServlet {
+
+    protected void <mark>doPost</mark>(HttpServletRequest req, HttpServletResponse resp) <span class="dim">…</span> {
+        String userId = <span class="dim">Validator.normalizeUserId(</span>req.getParameter("userId")<span class="dim">)</span>;
+        String password = req.getParameter("password");</code></pre>
+    <figcaption><code>web/LoginServlet.java</code>, lines 14–29, shortened. <code>req</code> is the request; <code>req.getParameter("userId")</code> reads one form field.</figcaption>
+    </figure>
+  </li>
+
+  <li class="layer-db">
+    <span class="hop-title"><span class="chip layer-db">UserDao</span> fetches the stored password hash</span>
+    <p>The servlet asks <code>UserDao</code> for this user’s password hash, and <code>UserDao</code> uses JDBC to run one SQL query against the <code>users</code> table. The database never stores the password itself, only a scrambled version called a hash; lesson 3 explains why.</p>
+    <figure>
+<pre class="layer-db"><code>String sql = "<mark>SELECT password_hash FROM users WHERE user_id = ?</mark>";
+try (Connection conn = db.getConnection();
+     PreparedStatement ps = conn.prepareStatement(sql)) {
+    ps.setString(1, userId);
+    try (ResultSet rs = ps.executeQuery()) { <span class="dim">…</span> }
+}</code></pre>
+    <figcaption><code>db/UserDao.java</code>, lines 75–83. <code>Connection</code>, <code>PreparedStatement</code>, and <code>ResultSet</code> are JDBC types; lesson 3 takes them apart.</figcaption>
+    </figure>
+  </li>
+
+  <li class="layer-servlet">
+    <span class="hop-title"><span class="chip layer-servlet">LoginServlet</span> checks the password and picks a path</span>
+    <p><code>PasswordHasher.verify</code> checks the typed password against the hash. Then one of two things happens:</p>
+    <div class="fork">
+      <div class="layer-jsp">
+        <span class="label">Wrong password</span>
+        The servlet puts an error message on the request and <em>forwards</em> to <span class="chip layer-jsp">login.jsp</span>, which draws the form again with the message.
+      </div>
+      <div class="layer-browser">
+        <span class="label">Right password</span>
+        The servlet starts a new <em>session</em> holding the User ID, then <em>redirects</em> the browser to <code>/home</code>.
+      </div>
+    </div>
+  </li>
+
+  <li class="layer-browser">
+    <span class="hop-title">The browser gets the response</span>
+    <p class="sidenote">A <strong>forward</strong> happens inside Tomcat; the browser never knows. A <strong>redirect</strong> tells the browser to send a new request. Lesson 3 covers when the app uses each. Your <code>redirect()</code> helper calls <code>sendRedirect</code>, which sends a <code>302</code> (<a href="https://jakarta.ee/specifications/servlet/6.1/apidocs/jakarta.servlet/jakarta/servlet/http/httpservletresponse">Servlet API docs</a>). Background: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Redirections">MDN, “Redirections in HTTP”</a>.</p>
+    <p>After a wrong password, the response is the HTML that <code>login.jsp</code> produced. After a right one, it is a short <strong>redirect</strong>: status <code>302</code> and a <code>Location: /jsp-login/home</code> header. The browser immediately sends a new request, <code>GET /jsp-login/home</code>, which <code>HomeServlet</code> answers with <code>home.jsp</code>.</p>
+  </li>
+</ol>
+
+<p>That is the whole app in miniature. Registering, resetting a password, and loading your photo all follow the same shape: <span class="chip plain layer-browser">request</span> <span class="chip plain layer-servlet">servlet</span> <span class="chip plain layer-db">UserDao</span> <span class="chip plain layer-jsp">JSP or redirect</span>. The <a href="../reference/project-5-map.html">Project 5 map</a> lists every route, and the <a href="../reference/project-5-flowchart.html">flow charts</a> draw them.</p>
+
+<h2>Practice</h2>
+<p>Answer from memory, without scrolling up. Recalling something is what makes it stick; rereading only feels like it does.</p>
+
+<section class="practice wide">
+
+<div class="q order">
+  <p class="prompt">Put the steps of a successful login in order.</p>
+  <div class="order-lists">
+    <div><h4>Steps</h4>
+      <ol class="pool"><li>The browser sends <code>POST /login</code> with the User ID and password</li><li>Tomcat calls the <code>doPost</code> method of <code>LoginServlet</code></li><li><code>UserDao</code> fetches the stored password hash over JDBC</li><li><code>LoginServlet</code> checks the typed password against the hash</li><li>The browser follows the redirect and requests <code>/home</code></li></ol>
+    </div>
+    <div><h4>Your order</h4><ol class="answer"></ol></div>
+  </div>
+  <div class="controls">
+    <button type="button" class="btn primary" data-check>Check order</button>
+    <button type="button" class="btn" data-reset>Start over</button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>Request in, servlet, database, decision, response out. Every route in the app has this shape.</p></div>
+</div>
+
+<p>For the next four, pick the part of Project 5 that does the job.</p>
+
+<div class="q mcq">
+  <p class="prompt">Works out which Java class should handle <code>POST /login</code>.</p>
+  <div class="options">
+    <button type="button" data-correct>Tomcat</button>
+    <button type="button"><code>LoginServlet</code></button>
+    <button type="button"><code>UserDao</code></button>
+    <button type="button"><code>login.jsp</code></button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>Tomcat, the servlet container, matches the URL against each servlet’s <code>@WebServlet</code> path, then calls the method that matches the HTTP method.</p></div>
+</div>
+
+<div class="q mcq">
+  <p class="prompt">Sends SQL to the database to fetch the stored password hash.</p>
+  <div class="options">
+    <button type="button">Tomcat</button>
+    <button type="button"><code>LoginServlet</code></button>
+    <button type="button" data-correct><code>UserDao</code></button>
+    <button type="button"><code>login.jsp</code></button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>All SQL lives in <code>UserDao</code>. The servlet asks for a hash; it never writes SQL itself. That separation is the point of a DAO (data access object).</p></div>
+</div>
+
+<div class="q mcq">
+  <p class="prompt">Decides between showing an error and redirecting to <code>/home</code>.</p>
+  <div class="options">
+    <button type="button">Tomcat</button>
+    <button type="button" data-correct><code>LoginServlet</code></button>
+    <button type="button"><code>UserDao</code></button>
+    <button type="button"><code>login.jsp</code></button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>Deciding what happens next is the controller’s job, and the servlet is the controller.</p></div>
+</div>
+
+<div class="q mcq">
+  <p class="prompt">Turns the error message into HTML the browser can show.</p>
+  <div class="options">
+    <button type="button">Tomcat</button>
+    <button type="button"><code>LoginServlet</code></button>
+    <button type="button"><code>UserDao</code></button>
+    <button type="button" data-correct><code>login.jsp</code></button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>The servlet only sets the message; the JSP (the view) decides how it looks on the page.</p></div>
+</div>
+
+<div class="q mcq">
+  <p class="prompt">Why does Tomcat call <code>doPost</code> rather than <code>doGet</code> when you press Log in?</p>
+  <div class="options" data-shuffle>
+    <button type="button" data-correct>The login form submits with method POST.</button>
+    <button type="button">The URL /login only accepts POST requests.</button>
+    <button type="button">Passwords are too long for GET requests.</button>
+    <button type="button">The servlet runs doPost after doGet ends.</button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p><code>login.jsp</code> contains <code class="wrap">&lt;form method="post" action="${ctx}/login"&gt;</code>, so the browser sends a POST. Typing the address <code>/login</code> sends a GET, which runs <code>doGet</code> and shows the empty form.</p></div>
+</div>
+
+<div class="q mcq">
+  <p class="prompt">In the login request, where are the User ID and password?</p>
+  <div class="options" data-shuffle>
+    <button type="button" data-correct>In the request body, as name=value pairs.</button>
+    <button type="button">In the URL, after a question mark.</button>
+    <button type="button">In a cookie the browser saved earlier.</button>
+    <button type="button">In the HTML of the login page.</button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p>A POST form puts its fields in the body. A GET form would put them in the URL after a <code>?</code>, which is one reason logins use POST: URLs end up in browser history and server logs.</p></div>
+</div>
+
+<div class="q mcq">
+  <p class="prompt">After a correct password, what does <code>LoginServlet</code> send back to the browser?</p>
+  <div class="options" data-shuffle>
+    <button type="button" data-correct>A redirect telling it to request /home.</button>
+    <button type="button">The HTML of home.jsp, built right away.</button>
+    <button type="button">The password hash it read from UserDao.</button>
+    <button type="button">The user’s row from the users table.</button>
+  </div>
+  <p class="feedback" aria-live="polite"></p>
+  <div class="explain" hidden><p><code>redirect(req, resp, "/home")</code> sends a <code>302</code> with a <code>Location</code> header. The browser then makes a fresh <code>GET /home</code>, and <code>HomeServlet</code> renders <code>home.jsp</code>. Password hashes never leave the server.</p></div>
+</div>
+
+<p class="scoreboard" data-scoreboard></p>
+</section>
+
+<h2>Say it to Ithena</h2>
+<p>Now the real skill. Start the timer and answer out loud, as if Ithena were listening. Then tick off what you covered.</p>
+
+<div class="rehearse wide" data-key="l1-login-walkthrough">
+  <p class="question">“Walk me through what happens when a user logs in.”</p>
+  <div class="controls">
+    <button type="button" class="btn" data-timer="60">Start 60-second timer</button>
+    <span class="timer-readout"></span>
+  </div>
+  <label for="l1-notes">Notes on what you said (optional; saved in this browser)</label>
+  <textarea id="l1-notes"></textarea>
+  <div class="controls"><button type="button" class="btn primary" data-reveal>Compare with the checklist</button></div>
+  <div class="reveal" hidden>
+    <ul class="checklist">
+      <li><label><input type="checkbox"> The browser sends a POST request to <code>/login</code> with the User ID and password.</label></li>
+      <li><label><input type="checkbox"> Tomcat routes it to <code>LoginServlet</code> through <code>@WebServlet("/login")</code> and calls <code>doPost</code>.</label></li>
+      <li><label><input type="checkbox"> <code>UserDao</code> uses JDBC to fetch the stored password hash from the <code>users</code> table.</label></li>
+      <li><label><input type="checkbox"> The typed password is checked against a hash, never compared as plain text.</label></li>
+      <li><label><input type="checkbox"> Wrong password: forward to <code>login.jsp</code>, which shows the error.</label></li>
+      <li><label><input type="checkbox"> Right password: store the User ID in a new session and redirect to <code>/home</code>.</label></li>
+    </ul>
+    <p class="checklist-count" aria-live="polite"></p>
+    <div class="model-answer">
+      <p>“When the user submits the login form, the browser sends a POST request to <code>/login</code> with their User ID and password. Tomcat routes it to my <code>LoginServlet</code>, which is mapped to <code>/login</code> with the <code>@WebServlet</code> annotation, and calls its <code>doPost</code> method. The servlet reads the two form fields and asks <code>UserDao</code> for that user’s stored password hash; <code>UserDao</code> runs a parameterised <code>SELECT</code> over JDBC. Then <code>PasswordHasher</code> checks the typed password against the hash. If it doesn’t match, the servlet forwards to <code>login.jsp</code>, which shows the form again with an error. If it does, the servlet starts a fresh session holding the User ID and redirects the browser to <code>/home</code>, where <code>HomeServlet</code> renders the landing page.”</p>
+    </div>
+  </div>
+</div>
+
+<section class="source">
+  <h2>Read next</h2>
+  <p class="sidenote">Optional, and short: the <a href="https://jakarta.ee/specifications/servlet/6.1/jakarta-servlet-spec-6.1#an-example">Jakarta Servlet specification, section 1.3, “An Example”</a> describes this same request path as a “typical sequence of events.”</p>
+  <p><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview"><strong>MDN, “An overview of HTTP”</strong></a>. The clearest free introduction to requests, responses, methods, and status codes, written by the people who document the web platform. Read it before lesson 2, where you will run the app and watch these exact messages in your own browser.</p>
+</section>
+
+<p class="ask">Something unclear? Ask me in Claude Code. I’m your teacher for this, and questions like “what is a session, really?” or “why redirect instead of forward?” are part of the lesson, not a detour.</p>
+
+<nav class="lesson-nav wide">
+  <a href="../reference/project-5-map.html">Reference: Project 5 map</a>
+  <a href="../reference/project-5-flowchart.html">Reference: Project 5 flow charts</a>
+  <a href="0002-remembering-who-is-logged-in.html">Next: lesson 2, how the app remembers who is logged in</a>
+</nav>
+
+</main>
+<script src="../assets/quiz.js"></script>
+</body>
+</html>
